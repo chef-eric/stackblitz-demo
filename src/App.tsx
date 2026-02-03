@@ -14,8 +14,13 @@
  * ACTUAL: Throws "User already authenticated" even after logout()
  */
 
-import { useState } from 'react'
-import { useLoginWithSiwe, usePrivy, useWallets } from '@privy-io/react-auth'
+import { useState } from 'react';
+
+import {
+  useLoginWithSiwe,
+  usePrivy,
+  useWallets,
+} from '@privy-io/react-auth';
 
 export default function App() {
   const [logs, setLogs] = useState<string[]>([])

@@ -1,10 +1,20 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import { PrivyProvider } from '@privy-io/react-auth'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { WagmiProvider, createConfig, http } from 'wagmi'
-import { bsc } from 'wagmi/chains'
-import App from './App'
+import React from 'react';
+
+import ReactDOM from 'react-dom/client';
+import {
+  createConfig,
+  http,
+  WagmiProvider,
+} from 'wagmi';
+import { bsc } from 'wagmi/chains';
+
+import { PrivyProvider } from '@privy-io/react-auth';
+import {
+  QueryClient,
+  QueryClientProvider,
+} from '@tanstack/react-query';
+
+import App from './App';
 
 // TODO: Replace with your Privy App ID
 const PRIVY_APP_ID = 'YOUR_PRIVY_APP_ID'
