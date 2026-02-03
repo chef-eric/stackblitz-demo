@@ -4,7 +4,6 @@ import { PrivyProvider } from '@privy-io/react-auth'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { WagmiProvider, createConfig, http } from 'wagmi'
 import { bsc } from 'wagmi/chains'
-import { injected, metaMask } from 'wagmi/connectors'
 import App from './App'
 
 // TODO: Replace with your Privy App ID
@@ -14,10 +13,6 @@ const queryClient = new QueryClient()
 
 const wagmiConfig = createConfig({
   chains: [bsc],
-  connectors: [
-    injected(),
-    metaMask(),
-  ],
   transports: {
     [bsc.id]: http(),
   },

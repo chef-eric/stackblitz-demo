@@ -1,10 +1,10 @@
 /**
  * Minimal reproduction for Privy "User already authenticated" bug
  * 
- * @privy-io/react-auth version: ^3.13.0
+ * @privy-io/react-auth version: see package.json
  * 
  * STEPS TO REPRODUCE:
- * 1. Connect wallet (MetaMask with multiple accounts)
+ * 1. Click "Connect with Privy" to connect wallet
  * 2. Click "Login with SIWE" - signs and authenticates
  * 3. Switch to a different account in MetaMask  
  * 4. Click "Logout from Privy"
@@ -16,21 +16,18 @@
 
 import { useState } from 'react'
 import { useLoginWithSiwe, usePrivy, useWallets } from '@privy-io/react-auth'
-import { useAccount, useConnect, useDisconnect } from 'wagmi'
 
 export default function App() {
   const [logs, setLogs] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
 
-  // Wagmi hooks
-  const { address, connector, isConnected } = useAccount()
-  const { connectors, connectAsync } = useConnect()
-  const { disconnectAsync } = useDisconnect()
-
   // Privy hooks
-  const { authenticated, ready, user, logout } = usePrivy()
+  const { authenticated, ready, user, logout, login } = usePrivy()
   const { generateSiweMessage, loginWithSiwe } = useLoginWithSiwe()
   const { wallets } = useWallets()
+
+  const connectedWallet = wallets[0]
+  const address = connectedWallet?.address
 
   const log = (msg: string) => {
     const time = new Date().toISOString().split('T')[1].split('.')[0]
@@ -40,24 +37,12 @@ export default function App() {
 
   const clearLogs = () => { setLogs([]); setError(null) }
 
-  // 1. Connect wallet
+  // 1. Connect wallet via Privy modal
   const handleConnect = async () => {
     try {
       clearLogs()
-      log('Connecting wallet...')
-      log(`Available connectors: ${connectors.map(c => c.id).join(', ')}`)
-      
-      // Try to find a suitable connector
-      const connector = connectors.find(c => 
-        c.id === 'injected' || c.id === 'metaMask' || c.id === 'io.metamask'
-      )
-      if (!connector) {
-        throw new Error(`No wallet connector found. Available: ${connectors.map(c => c.id).join(', ')}`)
-      }
-      
-      log(`Using connector: ${connector.id}`)
-      await connectAsync({ connector })
-      log(`Connected!`)
+      log('Opening Privy connect modal...')
+      login()
     } catch (e: any) {
       log(`Connect failed: ${e.message}`)
       setError(e.message)
@@ -72,8 +57,10 @@ export default function App() {
       log(`Address: ${address}`)
       log(`Privy ready: ${ready}`)
       log(`Privy authenticated: ${authenticated}`)
+      log(`Wallets count: ${wallets.length}`)
 
-      if (!address) throw new Error('No address')
+      if (!address) throw new Error('No address - connect wallet first')
+      if (!connectedWallet) throw new Error('No wallet connected')
 
       log('Generating SIWE message...')
       const message = await generateSiweMessage({
@@ -83,10 +70,7 @@ export default function App() {
       log('Message generated')
 
       log('Requesting signature...')
-      const wallet = wallets.find(w => w.address.toLowerCase() === address.toLowerCase())
-      if (!wallet) throw new Error('Wallet not in Privy wallets array')
-
-      const provider = await wallet.getEthereumProvider()
+      const provider = await connectedWallet.getEthereumProvider()
       const signature = await provider.request({
         method: 'personal_sign',
         params: [message, address],
@@ -118,42 +102,6 @@ export default function App() {
     }
   }
 
-  // 4. Disconnect wagmi
-  const handleDisconnect = async () => {
-    try {
-      log('Disconnecting wagmi...')
-      await disconnectAsync()
-      log('Wagmi disconnected')
-    } catch (e: any) {
-      log(`Disconnect failed: ${e.message}`)
-    }
-  }
-
-  // Full reset: disconnect + logout + reconnect
-  const handleFullReset = async () => {
-    try {
-      setError(null)
-      log('=== FULL RESET ===')
-      
-      log('1. Disconnecting wagmi...')
-      await disconnectAsync()
-      
-      log('2. Logging out from Privy...')
-      await logout()
-      
-      log('3. Reconnecting...')
-      if (connector) {
-        await connectAsync({ connector })
-        log('Reconnected!')
-      }
-      
-      log('=== RESET COMPLETE ===')
-    } catch (e: any) {
-      log(`Reset failed: ${e.message}`)
-      setError(e.message)
-    }
-  }
-
   const linkedWallets = user?.linkedAccounts
     ?.filter(a => a.type === 'wallet' && 'address' in a)
     .map(a => (a as any).address) ?? []
@@ -164,19 +112,17 @@ export default function App() {
         Privy "User already authenticated" Bug
       </h1>
       <p style={{ color: '#666', marginBottom: 20 }}>
-        <code>@privy-io/react-auth: ^3.13.0</code>
+        See <code>package.json</code> for versions
       </p>
 
       {/* Current State */}
       <div style={{ background: '#fff', padding: 15, borderRadius: 8, marginBottom: 20, border: '1px solid #ddd' }}>
         <h3 style={{ margin: '0 0 10px 0' }}>Current State</h3>
         <div style={{ fontFamily: 'monospace', fontSize: 13, lineHeight: 1.6 }}>
-          <div>wagmi connected: <b>{String(isConnected)}</b></div>
-          <div>wagmi address: <b>{address ?? 'none'}</b></div>
-          <div>connector: <b>{connector?.name ?? 'none'}</b></div>
           <div>privy ready: <b>{String(ready)}</b></div>
           <div>privy authenticated: <b style={{ color: authenticated ? 'green' : 'red' }}>{String(authenticated)}</b></div>
           <div>privy wallets: <b>{wallets.length}</b></div>
+          <div>current address: <b>{address ?? 'none'}</b></div>
           <div>linked wallets: <b>{linkedWallets.join(', ') || 'none'}</b></div>
         </div>
       </div>
@@ -197,7 +143,7 @@ export default function App() {
       {/* Buttons */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 20 }}>
         <button onClick={handleConnect} style={btnStyle('#2196f3')}>
-          1. Connect
+          1. Connect with Privy
         </button>
         <button onClick={handleLoginSiwe} style={btnStyle('#4caf50')}>
           2. Login SIWE
@@ -205,14 +151,8 @@ export default function App() {
         <button onClick={handleLogout} style={btnStyle('#ff9800')}>
           3. Logout Privy
         </button>
-        <button onClick={handleDisconnect} style={btnStyle('#f44336')}>
-          4. Disconnect
-        </button>
-        <button onClick={handleFullReset} style={btnStyle('#9c27b0')}>
-          Full Reset
-        </button>
         <button onClick={clearLogs} style={btnStyle('#607d8b')}>
-          Clear
+          Clear Logs
         </button>
       </div>
 
