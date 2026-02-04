@@ -10,15 +10,17 @@
 
 ## Steps to Reproduce
 
-1. Connect wallet (MetaMask with multiple accounts)
-2. Click "Login with SIWE" - signs and authenticates successfully
-3. **Switch to a different account in MetaMask**
-4. Click "Logout from Privy"
-5. Click "Login with SIWE" again
+1. Connect wallet A (MetaMask with multiple accounts)
+2. Click "Login with SIWE" - signs and authenticates with wallet A
+3. **Switch to wallet B in MetaMask**
+4. App automatically detects the account change and:
+   - Calls `logout()`
+   - Attempts `loginWithSiwe()` with wallet B
 
 ## Expected Behavior
 
-`loginWithSiwe()` should succeed with the new wallet account.
+- `loginWithSiwe()` should succeed with wallet B
+- Linked embedded wallet should be available for wallet B
 
 ## Actual Behavior
 
@@ -26,8 +28,11 @@
 
 This happens even though:
 - `logout()` was called and completed
-- The wallet address has changed
+- The wallet address has changed to wallet B
 - We expect a fresh authentication flow
+
+Additionally:
+- Cannot get the linked embedded wallet with wallet B
 
 ## Setup
 
@@ -50,6 +55,10 @@ To run on StackBlitz or CodeSandbox:
 
 ## Additional Notes
 
-- The bug occurs when switching accounts in MetaMask while authenticated
-- Even after `disconnectAsync()` (wagmi) + `logout()` (Privy) + `connectAsync()`, the error persists
+- The app automatically detects wallet account changes via `useEffect` watching the address
+- When an account change is detected (after SIWE auth), the app:
+  1. Calls `logout()` to clear Privy session
+  2. Immediately attempts `loginWithSiwe()` with the new wallet
+- The bug occurs: even after `logout()` completes, `loginWithSiwe()` throws "User already authenticated"
 - The Privy `authenticated` state may show `false` after logout, but `loginWithSiwe` still fails
+- The linked embedded wallet cannot be obtained for the new wallet (wallet B)
